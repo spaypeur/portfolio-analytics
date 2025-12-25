@@ -31,6 +31,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve image
+app.get('/470606673_18027556940622246_493275031728217966_n.jpg', (req, res) => {
+  const imagePath = path.join(__dirname, '..', '470606673_18027556940622246_493275031728217966_n.jpg');
+  res.sendFile(imagePath, (err) => {
+    if (err) {
+      res.status(404).send('Image not found');
+    }
+  });
+});
+
 // Main dashboard
 app.get('/', (req, res) => {
   const html = `<!DOCTYPE html>

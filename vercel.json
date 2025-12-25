@@ -3,26 +3,26 @@
   "name": "allisson-amber",
   "builds": [
     {
-      "src": "analytics_server.js",
+      "src": "api/analytics.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "analytics_server.js"
+      "dest": "api/analytics.js"
     },
     {
       "src": "/princess",
-      "dest": "analytics_server.js"
+      "dest": "api/analytics.js"
     },
     {
       "src": "/privacy-policy",
-      "dest": "analytics_server.js"
+      "dest": "api/analytics.js"
     },
     {
       "src": "/(.*)",
-      "dest": "analytics_server.js"
+      "dest": "api/analytics.js"
     }
   ]
 }

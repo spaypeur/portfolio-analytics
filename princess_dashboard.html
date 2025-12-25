@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - Allison Amber Hage</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%23ff69b4'>📊</text></svg>" type="image/svg+xml">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ff69b4 0%, #ff1493 25%, #ff69b4 50%, #da70d6 75%, #ff69b4 100%);
+            background-size: 400% 400%;
+            min-height: 100vh;
+            padding: 20px;
+            animation: gradientShift 8s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(255, 20, 147, 0.3);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #ff1493;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #ff69b4;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(255, 20, 147, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #ff1493;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ffb6d9;
+            color: #333;
+        }
+
+        .stat:last-child {
+            border-bottom: none;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #ff1493;
+        }
+
+        .back-link {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #ff69b4, #ff1493);
+            color: white;
+            text-decoration: none;
+            border-radius: 20px;
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .back-link:hover {
+            transform: translateY(-3px);
+        }
+
+        .loading {
+            color: #ff69b4;
+            font-style: italic;
+        }
+
+        .error {
+            color: #ff1493;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Portfolio</a>
+
+        <div class="header">
+            <h1>📊 Analytics Dashboard</h1>
+            <p>Real-time visitor analytics and insights</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h2>📈 Overall Statistics</h2>
+                <div class="stat">
+                    <span>Total Visitors:</span>
+                    <span class="stat-value" id="total-visitors">Loading...</span>
+                </div>
+                <div class="stat">
+                    <span>Unique Visitors:</span>
+                    <span class="stat-value" id="unique-visitors">Loading...</span>
+                </div>
+                <div class="stat">
+                    <span>Visitors (24h):</span>
+                    <span class="stat-value" id="visitors-24h">Loading...</span>
+                </div>
+                <div class="stat">
+                    <span>Visitors (7d):</span>
+                    <span class="stat-value" id="visitors-7d">Loading...</span>
+                </div>
+                <div class="stat">
+                    <span>Growth Rate:</span>
+                    <span class="stat-value" id="growth-rate">Loading...</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🌍 Top Countries</h2>
+                <div id="countries-list">
+                    <p class="loading">Loading...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🌐 Top Browsers</h2>
+                <div id="browsers-list">
+                    <p class="loading">Loading...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📱 Device Types</h2>
+                <div id="devices-list">
+                    <p class="loading">Loading...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔒 Privacy Compliance</h2>
+                <div id="privacy-stats">
+                    <p class="loading">Loading...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>💚 System Health</h2>
+                <div id="health-status">
+                    <p class="loading">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadDashboard() {
+            try {
+                // Load overall statistics
+                const analyticsResponse = await fetch('/api/analytics');
+                const analyticsData = await analyticsResponse.json();
+                
+                document.getElementById('total-visitors').textContent = (analyticsData.totalVisitors || 0).toLocaleString();
+                document.getElementById('unique-visitors').textContent = (analyticsData.uniqueVisitors || 0).toLocaleString();
+                document.getElementById('visitors-24h').textContent = (analyticsData.visitors24h || 0).toLocaleString();
+                document.getElementById('visitors-7d').textContent = (analyticsData.visitors7d || 0).toLocaleString();
+                document.getElementById('growth-rate').textContent = (analyticsData.growthRate || 0).toFixed(2) + '%';
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                document.getElementById('total-visitors').textContent = 'Error';
+            }
+
+            try {
+                // Load countries
+                const countriesResponse = await fetch('/api/countries');
+                const countriesData = await countriesResponse.json();
+                
+                let countriesHtml = '';
+                if (countriesData && countriesData.length > 0) {
+                    countriesData.slice(0, 5).forEach(item => {
+                        countriesHtml += `<div class="stat"><span>${item.country_code}</span><span class="stat-value">${item.count}</span></div>`;
+                    });
+                } else {
+                    countriesHtml = '<p class="loading">No data available</p>';
+                }
+                document.getElementById('countries-list').innerHTML = countriesHtml;
+            } catch (error) {
+                console.error('Error loading countries:', error);
+                document.getElementById('countries-list').innerHTML = '<p class="error">Error loading data</p>';
+            }
+
+            try {
+                // Load browsers
+                const browsersResponse = await fetch('/api/stats');
+                const browsersData = await browsersResponse.json();
+                
+                let browsersHtml = '';
+                if (browsersData && browsersData.length > 0) {
+                    browsersData.slice(0, 5).forEach(item => {
+                        browsersHtml += `<div class="stat"><span>${item.browser_name}</span><span class="stat-value">${item.count}</span></div>`;
+                    });
+                } else {
+                    browsersHtml = '<p class="loading">No data available</p>';
+                }
+                document.getElementById('browsers-list').innerHTML = browsersHtml;
+            } catch (error) {
+                console.error('Error loading browsers:', error);
+                document.getElementById('browsers-list').innerHTML = '<p class="error">Error loading data</p>';
+            }
+
+            try {
+                // Load devices
+                const devicesResponse = await fetch('/api/devices');
+                const devicesData = await devicesResponse.json();
+                
+                let devicesHtml = '';
+                if (devicesData && devicesData.length > 0) {
+                    devicesData.forEach(item => {
+                        devicesHtml += `<div class="stat"><span>${item.device_type || 'Unknown'}</span><span class="stat-value">${item.count}</span></div>`;
+                    });
+                } else {
+                    devicesHtml = '<p class="loading">No data available</p>';
+                }
+                document.getElementById('devices-list').innerHTML = devicesHtml;
+            } catch (error) {
+                console.error('Error loading devices:', error);
+                document.getElementById('devices-list').innerHTML = '<p class="error">Error loading data</p>';
+            }
+
+            try {
+                // Load privacy stats
+                const privacyResponse = await fetch('/api/privacy-stats');
+                const privacyData = await privacyResponse.json();
+                
+                const consentRate = privacyData.consentRate || 0;
+                const privacyHtml = `
+                    <div class="stat"><span>Total Records:</span><span class="stat-value">${(privacyData.totalRecords || 0).toLocaleString()}</span></div>
+                    <div class="stat"><span>Consented:</span><span class="stat-value">${(privacyData.consentedRecords || 0).toLocaleString()}</span></div>
+                    <div class="stat"><span>Consent Rate:</span><span class="stat-value">${consentRate.toFixed(2)}%</span></div>
+                `;
+                document.getElementById('privacy-stats').innerHTML = privacyHtml;
+            } catch (error) {
+                console.error('Error loading privacy stats:', error);
+                document.getElementById('privacy-stats').innerHTML = '<p class="error">Error loading data</p>';
+            }
+
+            try {
+                // Load health status
+                const healthResponse = await fetch('/api/health');
+                const healthData = await healthResponse.json();
+                
+                const statusColor = healthData.status === 'healthy' ? '#4CAF50' : '#ff1493';
+                const healthHtml = `
+                    <div class="stat"><span>Status:</span><span class="stat-value" style="color: ${statusColor}">${healthData.status}</span></div>
+                    <div class="stat"><span>Database:</span><span class="stat-value" style="color: ${healthData.database === 'healthy' ? '#4CAF50' : '#ff1493'}">${healthData.database}</span></div>
+                    <div class="stat"><span>Recent Visitors:</span><span class="stat-value">${(healthData.recentVisitors || 0).toLocaleString()}</span></div>
+                `;
+                document.getElementById('health-status').innerHTML = healthHtml;
+            } catch (error) {
+                console.error('Error loading health status:', error);
+                document.getElementById('health-status').innerHTML = '<p class="error">Error loading data</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+        setInterval(loadDashboard, 60000); // Refresh every minute
+    </script>
+</body>
+</html>

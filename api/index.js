@@ -1,10 +1,15 @@
 require('dotenv').config();
 const express = require('express');
 const geoip = require('geoip-lite');
+const fs = require('fs');
+const path = require('path');
 const { supabase } = require('../supabase_client');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
+
+// Serve static files (images)
+app.use(express.static(path.join(__dirname, '..')));
 
 // CORS
 app.use((req, res, next) => {
@@ -41,6 +46,10 @@ app.get('/', (req, res) => {
         @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         .container { background: white; border-radius: 40px; box-shadow: 0 20px 60px rgba(255, 20, 147, 0.4); padding: 60px; max-width: 900px; width: 100%; text-align: center; animation: slideUp 0.8s ease-out; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
+        .avatar-wrapper { margin-bottom: 40px; animation: bounceIn 1s ease-out 0.2s both; }
+        @keyframes bounceIn { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; } 100% { opacity: 1; transform: scale(1); } }
+        .avatar-img { width: 200px; height: 200px; border-radius: 50%; border: 8px solid #ff69b4; object-fit: cover; display: block; margin: 0 auto; box-shadow: 0 10px 40px rgba(255, 20, 147, 0.5); transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .avatar-img:hover { transform: scale(1.1); box-shadow: 0 15px 50px rgba(255, 20, 147, 0.7); }
         h1 { color: #ff1493; font-size: 2.8em; margin: 20px 0 10px 0; }
         .subtitle { color: #ff69b4; font-size: 1.3em; margin-bottom: 10px; }
         .bio { color: #666; font-size: 1em; margin-bottom: 30px; }
@@ -57,6 +66,9 @@ app.get('/', (req, res) => {
 </head>
 <body>
     <div class="container">
+        <div class="avatar-wrapper">
+            <img src="/470606673_18027556940622246_493275031728217966_n.jpg" alt="Allison" class="avatar-img" onerror="this.style.display='none'">
+        </div>
         <h1>✨ Allison Amber Hage ✨</h1>
         <p class="subtitle">💕 Digital Creator & Content Enthusiast 💕</p>
         <p class="bio">Passionate about creating engaging content and connecting with amazing people around the world 💫</p>

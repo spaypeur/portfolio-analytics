@@ -506,11 +506,17 @@ app.get('/api/referrers', async (req, res) => {
 // Health check
 app.get('/api/health', async (req, res) => {
   try {
+    console.log('Health check - SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
+    console.log('Health check - SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT SET');
+    
     const { data, error } = await supabase
       .from('visitors')
       .select('count(*)', { head: true, count: 'exact' });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
 
     res.status(200).json({
       status: 'healthy',

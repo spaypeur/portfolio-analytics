@@ -371,14 +371,15 @@ app.post('/api/track', async (req, res) => {
 // Get analytics
 app.get('/api/analytics', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    // Get total visitors count
+    const { count: totalCount, error: totalError } = await supabase
       .from('visitors')
-      .select('count(*)', { head: true, count: 'exact' });
+      .select('*', { count: 'exact', head: true });
 
-    if (error) throw error;
+    if (totalError) throw totalError;
 
     res.status(200).json({
-      totalVisitors: data?.length || 0,
+      totalVisitors: totalCount || 0,
       uniqueVisitors: 0,
       visitors24h: 0,
       visitors7d: 0,
@@ -397,14 +398,25 @@ app.get('/api/countries', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('visitors')
-      .select('country_code, count(*) as count')
+      .select('country_code')
       .not('country_code', 'is', null)
-      .order('count', { ascending: false })
-      .limit(10);
+      .order('created_at', { ascending: false })
+      .limit(100);
 
     if (error) throw error;
 
-    res.status(200).json(data || []);
+    // Count occurrences
+    const countMap = {};
+    data.forEach(row => {
+      countMap[row.country_code] = (countMap[row.country_code] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([country_code, count]) => ({ country_code, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching countries:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch country data' });
@@ -416,13 +428,25 @@ app.get('/api/stats', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('visitors')
-      .select('browser_name, count(*) as count')
-      .order('count', { ascending: false })
-      .limit(10);
+      .select('browser_name')
+      .not('browser_name', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
 
     if (error) throw error;
 
-    res.status(200).json(data || []);
+    // Count occurrences
+    const countMap = {};
+    data.forEach(row => {
+      countMap[row.browser_name] = (countMap[row.browser_name] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([browser_name, count]) => ({ browser_name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching browser stats:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch browser stats' });
@@ -434,12 +458,24 @@ app.get('/api/devices', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('visitors')
-      .select('device_type, count(*) as count')
-      .order('count', { ascending: false });
+      .select('device_type')
+      .not('device_type', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
 
     if (error) throw error;
 
-    res.status(200).json(data || []);
+    // Count occurrences
+    const countMap = {};
+    data.forEach(row => {
+      countMap[row.device_type] = (countMap[row.device_type] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([device_type, count]) => ({ device_type, count }))
+      .sort((a, b) => b.count - a.count);
+
+    res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching device stats:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch device stats' });
@@ -538,15 +574,15 @@ app.get('/api/health', async (req, res) => {
 // Privacy stats
 app.get('/api/privacy-stats', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from('visitors')
-      .select('count(*)', { head: true, count: 'exact' });
+      .select('*', { count: 'exact', head: true });
 
     if (error) throw error;
 
     res.status(200).json({
-      totalRecords: data?.length || 0,
-      consentedRecords: data?.length || 0,
+      totalRecords: count || 0,
+      consentedRecords: count || 0,
       nonConsentedRecords: 0,
       consentRate: 100
     });

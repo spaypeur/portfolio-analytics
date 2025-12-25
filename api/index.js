@@ -98,55 +98,34 @@ app.get('/', (req, res) => {
             <span class="skill-tag">📢 Marketing</span>
             <span class="skill-tag">👑 Influencer</span>
         </div>
-        <div class="analytics">
-            <h3>📊 Profile Analytics</h3>
-            <div class="stat"><span>Total Visitors:</span><span id="total-visitors">Loading...</span></div>
-            <div class="stat"><span>Visitors Today:</span><span id="today-visitors">Loading...</span></div>
-            <div class="stat"><span>Top Browser:</span><span id="top-browser">Loading...</span></div>
-            <div class="stat"><span>Top Country:</span><span id="top-country">Loading...</span></div>
-        </div>
         <div class="buttons">
             <a href="https://www.instagram.com/allisonamberhage/" target="_blank" class="btn">📸 Follow on Instagram</a>
             <a href="/privacy-policy" class="btn">🔒 Privacy Policy</a>
-            <a href="/api/health" class="btn">💚 System Status</a>
         </div>
     </div>
     <script>
-        async function loadAnalytics() {
+        // Analytics tracking - sends visitor data to server
+        async function trackVisitor() {
             try {
-                const response = await fetch('/api/analytics');
-                const data = await response.json();
-                document.getElementById('total-visitors').textContent = (data.totalVisitors || 0).toLocaleString();
-                document.getElementById('today-visitors').textContent = (data.visitors24h || 0).toLocaleString();
+                await fetch('/api/track', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userAgent: navigator.userAgent,
+                        browserName: 'Unknown',
+                        osName: 'Unknown',
+                        deviceType: 'Desktop',
+                        screenWidth: window.screen.width,
+                        screenHeight: window.screen.height,
+                        language: navigator.language,
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                    })
+                });
             } catch (error) {
-                document.getElementById('total-visitors').textContent = '0';
-                document.getElementById('today-visitors').textContent = '0';
-            }
-            try {
-                const browsersResponse = await fetch('/api/stats');
-                const browsersData = await browsersResponse.json();
-                if (browsersData && browsersData.length > 0) {
-                    document.getElementById('top-browser').textContent = browsersData[0].browser_name || 'N/A';
-                } else {
-                    document.getElementById('top-browser').textContent = 'N/A';
-                }
-            } catch (error) {
-                document.getElementById('top-browser').textContent = 'N/A';
-            }
-            try {
-                const countriesResponse = await fetch('/api/countries');
-                const countriesData = await countriesResponse.json();
-                if (countriesData && countriesData.length > 0) {
-                    document.getElementById('top-country').textContent = countriesData[0].country_code || 'N/A';
-                } else {
-                    document.getElementById('top-country').textContent = 'N/A';
-                }
-            } catch (error) {
-                document.getElementById('top-country').textContent = 'N/A';
+                console.log('Tracking sent');
             }
         }
-        document.addEventListener('DOMContentLoaded', loadAnalytics);
-        setInterval(loadAnalytics, 30000);
+        document.addEventListener('DOMContentLoaded', trackVisitor);
     </script>
 </body>
 </html>`;
@@ -599,6 +578,378 @@ app.post('/api/consent', (req, res) => {
     return res.status(400).json({ success: false, error: 'Consent value required' });
   }
   res.status(200).json({ success: true, consent: consent });
+});
+
+// ============ COMPREHENSIVE ANALYTICS ENDPOINTS ============
+
+// Get top pages
+app.get('/api/top-pages', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('page_visited')
+      .not('page_visited', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    const countMap = {};
+    data.forEach(row => {
+      countMap[row.page_visited] = (countMap[row.page_visited] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([page_visited, count]) => ({ page_visited, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching top pages:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch top pages' });
+  }
+});
+
+// Get referrers
+app.get('/api/referrers', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('referrer')
+      .not('referrer', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    const countMap = {};
+    data.forEach(row => {
+      countMap[row.referrer] = (countMap[row.referrer] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([referrer, count]) => ({ referrer, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching referrers:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch referrer stats' });
+  }
+});
+
+// Get OS statistics
+app.get('/api/os-stats', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('os_name')
+      .not('os_name', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    const countMap = {};
+    data.forEach(row => {
+      countMap[row.os_name] = (countMap[row.os_name] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([os_name, count]) => ({ os_name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching OS stats:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch OS stats' });
+  }
+});
+
+// Get screen resolutions
+app.get('/api/screen-resolutions', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('screen_width, screen_height')
+      .not('screen_width', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    const countMap = {};
+    data.forEach(row => {
+      const res = `${row.screen_width}x${row.screen_height}`;
+      countMap[res] = (countMap[res] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([resolution, count]) => ({ resolution, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching screen resolutions:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch screen resolutions' });
+  }
+});
+
+// Get languages
+app.get('/api/languages', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('language')
+      .not('language', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    const countMap = {};
+    data.forEach(row => {
+      countMap[row.language] = (countMap[row.language] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([language, count]) => ({ language, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching languages:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch languages' });
+  }
+});
+
+// Get visitor timeline (hourly)
+app.get('/api/timeline', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 7;
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('created_at')
+      .gte('created_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    // Group by day
+    const dayMap = {};
+    data.forEach(row => {
+      const date = new Date(row.created_at).toISOString().split('T')[0];
+      dayMap[date] = (dayMap[date] || 0) + 1;
+    });
+
+    const result = Object.entries(dayMap)
+      .map(([date, count]) => ({ date, visitors: count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching timeline:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch timeline' });
+  }
+});
+
+// Get geographic heatmap data
+app.get('/api/geo-heatmap', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('latitude, longitude, country_code, city')
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
+    if (error) throw error;
+
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('Error fetching geo heatmap:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch geo heatmap' });
+  }
+});
+
+// Get detailed visitor info
+app.get('/api/visitors-detailed', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    res.status(200).json(data || []);
+  } catch (error) {
+    console.error('Error fetching detailed visitors:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch visitor details' });
+  }
+});
+
+// Get browser versions
+app.get('/api/browser-versions', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('browser_name, browser_version')
+      .not('browser_name', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    const countMap = {};
+    data.forEach(row => {
+      const key = `${row.browser_name} ${row.browser_version || 'Unknown'}`;
+      countMap[key] = (countMap[key] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([browser, count]) => ({ browser, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching browser versions:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch browser versions' });
+  }
+});
+
+// Get regions by country
+app.get('/api/regions/:country', async (req, res) => {
+  try {
+    const { country } = req.params;
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('region')
+      .eq('country_code', country.toUpperCase())
+      .not('region', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    const countMap = {};
+    data.forEach(row => {
+      countMap[row.region] = (countMap[row.region] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([region, count]) => ({ region, count }))
+      .sort((a, b) => b.count - a.count);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching regions:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch regions' });
+  }
+});
+
+// Get cities by country
+app.get('/api/cities/:country', async (req, res) => {
+  try {
+    const { country } = req.params;
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('city')
+      .eq('country_code', country.toUpperCase())
+      .not('city', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    const countMap = {};
+    data.forEach(row => {
+      countMap[row.city] = (countMap[row.city] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([city, count]) => ({ city, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching cities:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch cities' });
+  }
+});
+
+// Get device brands
+app.get('/api/device-brands', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('visitors')
+      .select('device_brand')
+      .not('device_brand', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    const countMap = {};
+    data.forEach(row => {
+      countMap[row.device_brand] = (countMap[row.device_brand] || 0) + 1;
+    });
+
+    const result = Object.entries(countMap)
+      .map(([device_brand, count]) => ({ device_brand, count }))
+      .sort((a, b) => b.count - a.count);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching device brands:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch device brands' });
+  }
+});
+
+// Get summary statistics
+app.get('/api/summary', async (req, res) => {
+  try {
+    const { count: totalCount } = await supabase
+      .from('visitors')
+      .select('*', { count: 'exact', head: true });
+
+    const { count: todayCount } = await supabase
+      .from('visitors')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    const { count: weekCount } = await supabase
+      .from('visitors')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+    const { count: monthCount } = await supabase
+      .from('visitors')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+
+    res.status(200).json({
+      totalVisitors: totalCount || 0,
+      visitorsToday: todayCount || 0,
+      visitorsThisWeek: weekCount || 0,
+      visitorsThisMonth: monthCount || 0,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching summary:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch summary' });
+  }
 });
 
 module.exports = app;
